@@ -11,9 +11,16 @@ html, body, #container, #loading {
   position: fixed;
   background-color: #FFF;
   text-align: center;
-  background-image: url(../imgs/load.png);
   background-repeat: no-repeat;
   background-position: 50% 50%;
+}
+
+.loading_default {
+  background-image: url(ant-static://imgs/load.png);
+}
+
+.loading_christmas {
+  background-image: url(ant-static://imgs/load-christmas.png);
 }
 
 /*sidebar.bubble*/
@@ -41,6 +48,9 @@ html, body, #container, #loading {
 .update-icon {
   font-size: 100px;
   text-align: center;
+}
+.dhxwins_vp_dhx_skyblue div.dhxwin_hdr div.update-winicon {
+  background-image: url("ant-static://imgs/cloud-download.svg");
 }
 
 /*update-loading*/
@@ -190,6 +200,10 @@ html, body, #container, #loading {
 .about > p {
   color: #ececec;
 }
+.about > h2 > span {
+  font-size: 14px;
+  color: #9E9E9E;
+}
 .about a {
   text-decoration: blink;
   color: #795548;
@@ -199,3 +213,39 @@ html, body, #container, #loading {
 .about a:hover {
   color: #009688;
 }
+
+
+
+webview {
+  display:inline-flex;
+  width:100%;
+  height:100%;
+}
+webview.hide {
+  flex: 0 1;
+  width: 0px;
+  height: 0px;
+}
+
+
+/*滚动栏样式
+
+::-webkit-scrollbar-track-piece {
+	background-color:#f5f5f5;
+	border-left:1px solid #d2d2d2;
+}
+::-webkit-scrollbar {
+	width:13px;
+	height:13px;
+}
+::-webkit-scrollbar-thumb {
+	background-color:#c2c2c2;
+	background-clip:padding-box;
+	border:1px solid #979797;
+	min-height:28px;
+}
+::-webkit-scrollbar-thumb:hover {
+	border:1px solid #636363;
+	background-color:#929292;
+}
+*/

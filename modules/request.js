@@ -1,22 +1,23 @@
 /**
  * HTTP后端数据发送处理函数
- * 更新: 2016/04/25
+ * 更新: 2016/05/07
  */
 
 'use strict';
 
 const fs = require('fs'),
   iconv = require('iconv-lite'),
-  logger = require('log4js').getLogger('Request'),
   through = require('through'),
+  CONF = require('./config'),
   superagent = require('superagent'),
   superagentProxy = require('superagent-proxy');
 
+let logger;
 // 请求UA
-const USER_AGENT = 'antSword/v1.3';
+const USER_AGENT = 'antSword/v2.0';
 
 // 请求超时
-const REQ_TIMEOUT = 5000;
+const REQ_TIMEOUT = 10000;
 
 // 代理配置
 const APROXY_CONF = {
@@ -27,6 +28,7 @@ const APROXY_CONF = {
 class Request {
 
   constructor(electron) {
+    logger = new electron.Logger('Request');
     const ipcMain = electron.ipcMain;
 
     ipcMain.on('aproxy', this.onAproxy.bind(this));
@@ -65,6 +67,9 @@ class Request {
    */
   onAproxyTest(event, opts) {
     logger.debug('aProxy::Test Proxy -', opts['aproxyuri'], '- Connect to ', opts['url']);
+    if(opts['url'].match(CONF.urlblacklist)) {
+      return event.sender.send('request-error-' + opts['hash'], "Blacklist URL");
+    }
     superagentProxy(superagent);
     superagent
       .get(opts['url'])
@@ -73,7 +78,7 @@ class Request {
       .timeout(REQ_TIMEOUT)
       .end((err, ret) => {
         if (err) {
-          logger.error("aProxy::Test Error", err);
+          logger.fatal("aProxy::Test Error", err);
           return event.sender.send('aproxytest-error-' + opts['hash'], err);
         }else{
           logger.info("aProxy::Test Success");
@@ -90,28 +95,50 @@ class Request {
    * @return {[type]}       [description]
    */
   onRequest(event, opts) {
-
-    logger.debug('onRequest::url', opts['url']);
-    logger.debug('onRequest::data', opts['data']);
-    superagent
-      .post(opts['url'])
-      .set('User-Agent', USER_AGENT)
+    logger.debug('onRequest::opts', opts);
+    if(opts['url'].match(CONF.urlblacklist)) {
+      return event.sender.send('request-error-' + opts['hash'], "Blacklist URL");
+    }
+    let _request = superagent.post(opts['url']);
+    // 设置headers
+    _request.set('User-Agent', USER_AGENT);
+    // 自定义headers
+    for (let _ in opts.headers) {
+      _request.set(_, opts.headers[_]);
+    }
+    // 自定义body
+    const _postData = Object.assign({}, opts.body, opts.data);
+    // 通过替换函数方式来实现发包方式切换, 后续可改成别的
+    const old_send = _request.send;
+    if(opts['useMultipart'] == 1) {
+      _request.send = _request.field;
+    }else{
+      _request.send = old_send;
+    }
+    _request
       .proxy(APROXY_CONF['uri'])
       .type('form')
-      .timeout(REQ_TIMEOUT)
-      .send(opts['data'])
+      // 超时
+      .timeout(opts.timeout || REQ_TIMEOUT)
+      // 忽略HTTPS
+      .ignoreHTTPS(opts['ignoreHTTPS'])
+      .send(_postData)
       .parse((res, callback) => {
         this.parse(opts['tag_s'], opts['tag_e'], (chunk) => {
           event.sender.send('request-chunk-' + opts['hash'], chunk);
         }, res, callback);
       })
       .end((err, ret) => {
-        if (err) {
+        if (!ret) {
+          // 请求失败 TIMEOUT
           return event.sender.send('request-error-' + opts['hash'], err);
-        };
-        let buff = ret.body;
+        }
+        let buff = ret.hasOwnProperty('body') ? ret.body : new Buffer();
         // 解码
         let text = iconv.decode(buff, opts['encode']);
+        if (err && text == "") {
+          return event.sender.send('request-error-' + opts['hash'], err);
+        };
         // 回调数据
         event.sender.send('request-' + opts['hash'], {
           text: text,
@@ -128,7 +155,9 @@ class Request {
    */
   onDownlaod(event, opts) {
     logger.debug('onDownlaod', opts);
-
+    if(opts['url'].match(CONF.urlblacklist)) {
+      return event.sender.send('request-error-' + opts['hash'], "Blacklist URL");
+    }
     // 创建文件流
     const rs = fs.createWriteStream(opts['path']);
 
@@ -136,15 +165,30 @@ class Request {
     let indexEnd = -1;
     let tempData = [];
 
-    // 开始HTTP请求
-    superagent
-      .post(opts['url'])
-      .set('User-Agent', USER_AGENT)
+    let _request = superagent.post(opts['url']);
+    // 设置headers
+    _request.set('User-Agent', USER_AGENT);
+    // 自定义headers
+    for (let _ in opts.headers) {
+      _request.set(_, opts.headers[_]);
+    }
+    // 自定义body
+    const _postData = Object.assign({}, opts.body, opts.data);
+    // 通过替换函数方式来实现发包方式切换, 后续可改成别的
+    const old_send = _request.send;
+    if(opts['useMultipart'] == 1) {
+      _request.send = _request.field;
+    }else{
+      _request.send = old_send;
+    }
+    _request
       .proxy(APROXY_CONF['uri'])
       .type('form')
       // 设置超时会导致文件过大时写入出错
       // .timeout(timeout)
-      .send(opts['data'])
+      // 忽略HTTPS
+      .ignoreHTTPS(opts['ignoreHTTPS'])
+      .send(_postData)
       .pipe(through(
         (chunk) => {
           // 判断数据流中是否包含后截断符？长度++
@@ -229,7 +273,7 @@ class Request {
       res.data += finalData;
     });
     res.on('end', () => {
-      logger.info('end::size=' + res.data.length, res.data.length < 10 ? res.data : '');
+      logger.info(`end.size=${res.data.length}`, res.data);
       callback(null, new Buffer(res.data, 'binary'));
     });
   }

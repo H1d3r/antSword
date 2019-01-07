@@ -3430,6 +3430,8 @@ div.gridbox_dhx_skyblue.gridbox table.obj tr td {
 div.gridbox_dhx_skyblue.gridbox table.hdr td div.hdrcell {
   padding-left: 10px;
   width: auto;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 div.gridbox_dhx_skyblue.gridbox table.hdr td {
   border-width: 1px 1px 1px 1px;

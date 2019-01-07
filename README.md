@@ -1,62 +1,53 @@
-# AntSword
-> AntSword is an `open source` and `cross-platform`'s **Web Site Administration Tool**.     
-> You can use it easily and intuitively to management your website(webshell).
+# AntSword [![release](https://img.shields.io/badge/release-v2.0.3-blue.svg?style=flat-square)][url-release]
 
-[![node](https://img.shields.io/badge/node-4.0+-green.svg?style=flat-square)](https://nodejs.org/en/download/)
-[![release](https://img.shields.io/badge/release-v1.3.0-blue.svg?style=flat-square)][url-release]
+> AntSword in your hands, no worries in your mind！
 
-[中文说明][url-doccn] | [开发文档][url-document] | [CHANGELOG][url-changelog]
+**AntSword is an open source, cross-platform website administration tool, being designed to meet the needs of penetration testers together with security researchers with permissions and/or authorizations as well as webmasters.**
 
-## Start
-If you do not care about how to write the code, you can go to the [Release Page](https://github.com/antoor/antSword/releases) to download the corresponding archive decompression, and then executed directly to use!
+**Anyone shall not use it for illegal purposes and profitability. Besides that, publishing unauthorized modified version is also prohibited, or otherwise bear legal responsibilities.**
 
-**If you are interested in this code, we welcome you to join!**
+This software, of which the development thought is modularization, is intended to provide easy-to-understand codes and modification guidelines for users of different levels. Therefore, any contribution making by everyone to this project is encouraged, whether large or small. By doing so, this tool can be more convenient and consequently become your most powerful kit！
 
-It does not require much coding knowledge you have, you just need to know what it means and how to modify the code on it!
+[中文说明][url-doczh] / [Document][url-document] / [Changelog][url-changelog]
 
-## Start with source code
+## Development stack
 
-#### 0x01. Get the source code
+- [Electron][url-electron]
+- [ES6][url-es6]
+- [dhtmlx][url-dhtmlx]
+- [Nodejs][url-nodejs]
+* And other libraries called in the project.
 
-``` sh
-$ git clone https://github.com/antoor/antSword.git
-```
+## Screenshots
 
-or
+![][url-mainui]
 
-Click the download url below:
+## Quick Start
 
-```
-https://github.com/antoor/antSword/archive/master.zip
-```
+See document: [Quick Start][url-quickstart]
 
-#### 0x02. Install node_modules
+## Contribute
 
-``` sh
-$ cd antSword
-$ npm install
-```
+See document: [Make contributions to AntSword][url-contribute]
 
-#### 0x03. Began to enjoy
+## Thanks
 
-``` sh
-$ npm start
-```
+> Thanks to anyone who made any contributions.
 
-## Join us
-  * Email: [u@uyu.us][url-email]
-  * HomePage: [http://uyu.us][url-homepage]
-  * MyWeibo: [http://weibo.com/antoor][url-weibo]
+## LICENSE
 
-## License
-This project is licensed under the terms of the [MIT license][url-mit]
+[LICENSE](./LICENSE)
 
-
-[url-doccn]: README_CN.md
+[url-doczh]: README_CN.md
 [url-changelog]: CHANGELOG.md
+[url-document]: http://doc.u0u.us/en/
+[url-release]: https://github.com/AntSwordProject/AntSword/releases/tag/2.0.0
+[url-electron]: http://electron.atom.io/
+[url-es6]: http://es6.ruanyifeng.com/
+[url-dhtmlx]: http://dhtmlx.com/
+[url-nodejs]: https://nodejs.org/
 [url-homepage]: http://uyu.us
-[url-email]: mailto:u@uyu.us
-[url-weibo]: http://weibo.com/antoor
-[url-mit]: LICENSE
-[url-document]: http://doc.uyu.us
-[url-release]: https://github.com/antoor/antSword/releases/tag/1.3.0
+[url-release]: https://github.com/AntSwordProject/AntSword/releases
+[url-quickstart]: https://doc.u0u.us/en/getting_started/index.html
+[url-contribute]: https://doc.u0u.us/en/contribute_docs.html
+[url-mainui]: http://7xtigg.com1.z0.glb.clouddn.com/doc/getting_started/get_antsword_2.jpg
